@@ -332,7 +332,7 @@ if __name__ == "__main__":
 		        print(sub)
 		        # get the session directory
 		        sess_dir = os.path.join(subdir, sess_name)
-		        print(sess_dir)
+		        # print(sess_dir)
 		        assert os.path.exists(sess_dir), \
 		            "Session directory %s doesn't exist" % sess_dir
 
@@ -341,6 +341,9 @@ if __name__ == "__main__":
 		            "Session meta file missing %s" % sess_meta_fp
 		        sess_vid_meta = np.load(sess_meta_fp)
 		        sess_vid_meta = sess_vid_meta.item()
+		        if sess_name not in sess_vid_meta:
+		        	# print("absent")
+		        	continue
 		        assert sess_name in sess_vid_meta, \
 		            "Can't find meta information for video " + sess_name
 		        vid_meta = sess_vid_meta[sess_name]
