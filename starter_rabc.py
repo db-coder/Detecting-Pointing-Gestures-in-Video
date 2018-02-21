@@ -37,12 +37,15 @@ import logging
 import traceback
 import cv2
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.cross_validation import cross_val_score
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 default_op_dir = os.path.join(script_path, "openpose_results")
 sess_meta_fp = os.path.join(script_path, "sess_vids_meta.npy")
 cv2_wnd_name = "Openpose results"
-sess_data = []				# nx127 array
+sess_data_input = []				# nx126 array
+sess_data_output = []				# nx1 array
 
 
 # These are joints between open pose keypoints. See:
@@ -239,8 +242,9 @@ def disp_pose_for_sess(sess_name, sess_dir, vid_meta, opts, logger):
                 "Right hand data is not 21 pnts: " + curr_json_fp
 
             frame_data = np.concatenate((lh_data.flatten(),rh_data.flatten()),axis=0)
-            frame_data = np.concatenate((frame_data,pointing),axis=0)
-            sess_data.append(frame_data)
+            # frame_data = np.concatenate((frame_data,pointing),axis=0)
+            sess_data_input.append(frame_data)
+            sess_data_output.append(pointing)
 
             # get not-arm body keypoints, if --onlyarms
             flt_body_kp = not_arm_kp_idxs if opts.onlyarms else ()
@@ -350,7 +354,10 @@ if __name__ == "__main__":
 
 		        # display the pose for all the frames
 		        disp_pose_for_sess(sess_name, sess_dir, vid_meta, args, logger)
-		        print(np.shape(sess_data))
+		        print(np.shape(sess_data_input))
+		        # print(sess_data_input[1530])
+		clf = RandomForestClassifier()
+		print np.mean(cross_val_score(clf,sess_data_input,sess_data_output,cv=10))
 
     except Exception as _err:
         logger.error(_err)
