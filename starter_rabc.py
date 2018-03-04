@@ -36,15 +36,23 @@ import json
 import logging
 import traceback
 import cv2
+import pickle
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.cross_validation import cross_val_score
+from sklearn.model_selection import cross_val_score
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import KFold
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import average_precision_score
+from sklearn.metrics import confusion_matrix
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 default_op_dir = os.path.join(script_path, "openpose_results")
 sess_meta_fp = os.path.join(script_path, "sess_vids_meta.npy")
 cv2_wnd_name = "Openpose results"
-sess_data_input = []				# nx126 array
+sess_data_body_input = []				# nx126 array
+sess_data_arms_input = []
 sess_data_output = []				# nx1 array
 
 
@@ -99,7 +107,7 @@ def draw_pose(pose_data, frame, conn_jnt, vis_conf_th=0.05, fltr_kp=(), \
                 be pose data for the body or the hand. It draws circles at
                 keypoints and lines between pairs of connected keypoints/
                 body parts.
-    
+
     @param      pose_data  An np array of size (x,3) containing all the pose
                            information that needs to be drawn.
     @param      frame      This is the np array frame on which all the pose
@@ -208,11 +216,11 @@ def disp_pose_for_sess(sess_name, sess_dir, vid_meta, opts, logger):
         if not opts.nopointing and is_pointing:
             # disp_frame.fill(50)
             # display pointing txt
-            pointing = [1]
+            pointing = 1
             # cv2.putText(disp_frame, "+ Pointing", (6, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255))
         else:
             # disp_frame.fill(0)
-            pointing = [0]
+            pointing = 0
 
         # display frame number
         lbl_txt = "Frame " + str(frame_idx)
@@ -241,10 +249,16 @@ def disp_pose_for_sess(sess_name, sess_dir, vid_meta, opts, logger):
             assert rh_data.shape[0] == 21, \
                 "Right hand data is not 21 pnts: " + curr_json_fp
 
-            frame_data = np.concatenate((lh_data.flatten(),rh_data.flatten()),axis=0)
+            frame_data_arms = np.concatenate((lh_data.flatten(),rh_data.flatten()),axis=0)
+            frame_data_body = pose_data.flatten()
+
             # frame_data = np.concatenate((frame_data,pointing),axis=0)
-            sess_data_input.append(frame_data)
+            sess_data_arms_input.append(frame_data_arms)
+            sess_data_body_input.append(frame_data_body)
+
+
             sess_data_output.append(pointing)
+
 
             # get not-arm body keypoints, if --onlyarms
             flt_body_kp = not_arm_kp_idxs if opts.onlyarms else ()
@@ -292,6 +306,59 @@ def disp_pose_for_sess(sess_name, sess_dir, vid_meta, opts, logger):
     # cv2.destroyAllWindows()
 
 
+def cross_validation(model, num_folds, X, y):
+    kf = KFold(num_folds)
+    sum_average_precision = 0
+
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        model.fit(X_train, y_train)
+
+        y_scores = model.predict(X_test)
+
+        average_precision = average_precision_score(y_test, y_scores)
+
+        unique1,count1 = np.unique(y_test+y_scores, return_counts = True)
+        add_0 = dict(zip(unique1,count1))
+
+        unique2, count2 = np.unique(y_test - y_scores, return_counts=True)
+        sub_0 = dict(zip(unique2, count2))
+
+        print([[add_0[0],sub_0[-1]],[sub_0[1],add_0[2]]])
+
+        print(confusion_matrix(y_test, y_scores))
+
+        # precision, recall, _ = precision_recall_curve(y_test, y_scores)
+
+        precision = add_0[2]/float(add_0[2]+sub_0[-1])#average_precision
+        print(precision)
+
+        sum_average_precision += precision
+
+        print average_precision
+
+
+
+    return sum_average_precision / num_folds
+
+
+
+        # plt.step(recall, precision, color='b', alpha=0.2,
+        #          where='post')
+        # plt.fill_between(recall, precision, step='post', alpha=0.2,
+        #                  color='b')
+        #
+        # plt.xlabel('Recall')
+        # plt.ylabel('Precision')
+        # plt.ylim([0.0, 1.05])
+        # plt.xlim([0.0, 1.0])
+        # plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(average_precision))
+
+
+
+
 if __name__ == "__main__":
     # set the logger
     logger = logging.getLogger(os.path.basename(__file__))
@@ -330,34 +397,63 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-    	for subdir, dirs, files in os.walk(args.openposedir):
-    		for sub in dirs:
-		        sess_name = sub
-		        print(sub)
-		        # get the session directory
-		        sess_dir = os.path.join(subdir, sess_name)
-		        # print(sess_dir)
-		        assert os.path.exists(sess_dir), \
-		            "Session directory %s doesn't exist" % sess_dir
 
-		        # load the this session's meta information
-		        assert os.path.exists(sess_meta_fp), \
-		            "Session meta file missing %s" % sess_meta_fp
-		        sess_vid_meta = np.load(sess_meta_fp)
-		        sess_vid_meta = sess_vid_meta.item()
-		        if sess_name not in sess_vid_meta:
-		        	# print("absent")
-		        	continue
-		        assert sess_name in sess_vid_meta, \
-		            "Can't find meta information for video " + sess_name
-		        vid_meta = sess_vid_meta[sess_name]
+        if(os.path.isfile("data.pkl") == False):
+            for subdir, dirs, files in os.walk(args.openposedir):
+                for sub in dirs:
+                    sess_name = sub
+                    print(sub)
+                    # get the session directory
+                    sess_dir = os.path.join(subdir, sess_name)
+                    # print(sess_dir)
+                    assert os.path.exists(sess_dir), \
+                        "Session directory %s doesn't exist" % sess_dir
 
-		        # display the pose for all the frames
-		        disp_pose_for_sess(sess_name, sess_dir, vid_meta, args, logger)
-		        print(np.shape(sess_data_input))
-		        # print(sess_data_input[1530])
-		clf = RandomForestClassifier()
-		print np.mean(cross_val_score(clf,sess_data_input,sess_data_output,cv=10))
+                    # load the this session's meta information
+                    assert os.path.exists(sess_meta_fp), \
+                        "Session meta file missing %s" % sess_meta_fp
+                    sess_vid_meta = np.load(sess_meta_fp)
+                    sess_vid_meta = sess_vid_meta.item()
+                    if sess_name not in sess_vid_meta:
+                        # print("absent")
+                        continue
+                    assert sess_name in sess_vid_meta, \
+                        "Can't find meta information for video " + sess_name
+                    vid_meta = sess_vid_meta[sess_name]
+
+                    # display the pose for all the frames
+                    disp_pose_for_sess(sess_name, sess_dir, vid_meta, args, logger)
+                    #print(np.shape(sess_data_input))
+                    #print(np.shape(sess_data_output))
+                    print("no file")
+                    # print(sess_data_input[1530])
+
+            #print(np.shape(sess_data_input))
+            #print(np.shape(sess_data_output))
+            pickle.dump([np.array(sess_data_arms_input),np.array(sess_data_body_input),np.array(sess_data_output)],open("data.pkl","w+"))
+
+        sess_data_arms_input,sess_data_body_input,sess_data_output = pickle.load(open("data.pkl","r"))
+
+        print sess_data_arms_input.shape, sess_data_body_input.shape, sess_data_output.shape
+
+        scalar = StandardScaler()
+        scalar.fit(sess_data_arms_input)
+        sess_data_arms_input = scalar.transform(sess_data_arms_input)
+
+        clf = MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (200,100,50,20), random_state = 1)
+
+        # sess_data_output = np.array(sess_data_output).reshape(np.shape(sess_data_output)[0])
+        # clf = RandomForestClassifier()#(min_samples_leaf=25)
+
+
+        # clf.fit(sess_data_arms_input,sess_data_output)
+        # print np.mean(cross_val_score(clf,sess_data_arms_input,sess_data_output,cv=10))
+        average_precision = cross_validation(clf, 10, sess_data_arms_input, sess_data_output)
+
+        print(average_precision)
+
+
+
 
     except Exception as _err:
         logger.error(_err)
