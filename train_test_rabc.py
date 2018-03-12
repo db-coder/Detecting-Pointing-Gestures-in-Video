@@ -214,8 +214,7 @@ def is_pstv_pnt_smpl(start_fr_idx, end_fr_idx, vid_meta, opts):
     return is_pstv
 
 
-def get_smpl_pose_data(start_fr_idx, end_fr_idx, json_filepattern, arms_only,
-                       vid_meta, opts):
+def get_smpl_pose_data(start_fr_idx, end_fr_idx, json_filepattern, arms_only, vid_meta, opts):
     """
     This function generates the pose data tensor. This is done in accordance
     to whether this is an arms-only classifier or a full-body pose based
@@ -380,8 +379,8 @@ def test_sample(feat_X, trained_model):
     # scalar = StandardScaler()
     # scalar.fit(feat_X)
     # feat_X = scalar.transform(feat_X)
-
-    return trained_model.predict(feat_X)
+    print trained_model.predict_proba([feat_X])
+    return trained_model.predict_proba([feat_X])[-1][-1]
 
 
 def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
@@ -478,7 +477,8 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
         data_X = np.concatenate((data_X, sess_feat_data), axis=0)
         # collect label data from all the sessions
         data_Y = np.concatenate((data_Y, sess_lbl_data), axis=0)
-
+    print data_X
+    print data_X.shape
     return data_X, data_Y
 
 
@@ -529,13 +529,12 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # you can put anything in this dictionary. It contains your trained model.
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
-    trained_model = MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
+    trained_model = RandomForestClassifier(n_estimators = 50,max_features = None, min_samples_split = 4, oob_score = True, n_jobs = -1)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
     trained_model.fit(train_X,train_Y)
     return trained_model
 
 
-def test(trained_model, sess_names, frames_per_smpl, testing_stride, arms_only, \
-         sess_vids_meta, opts):
+def test(trained_model, sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta, opts):
     """
     This function tests the trained model on the specified sessions
     @param trained_model    The trained model returned by train(). You need
@@ -584,8 +583,7 @@ def test(trained_model, sess_names, frames_per_smpl, testing_stride, arms_only, 
     return test_Y, pred_prob
 
 
-def cv_train_test(exp_name, frames_per_smpl, tmprl_stride, arms_only, sess_cv_grps, \
-                  sess_vids_meta, opts):
+def cv_train_test(exp_name, frames_per_smpl, tmprl_stride, arms_only, sess_cv_grps, sess_vids_meta, opts):
     """
     Does K-fold cross-validation given all the sessions. Calls train() / test()
     to train, test for each cross-validation fold. At the end, it takes all the
