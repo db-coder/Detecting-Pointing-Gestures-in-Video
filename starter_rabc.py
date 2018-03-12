@@ -318,32 +318,25 @@ def cross_validation(model, num_folds, X, y):
 
         y_scores = model.predict(X_test)
 
-        average_precision = average_precision_score(y_test, y_scores)
+        # average_precision = average_precision_score(y_test, y_scores)
 
-        unique1,count1 = np.unique(y_test+y_scores, return_counts = True)
-        add_0 = dict(zip(unique1,count1))
+        # unique1,count1 = np.unique(y_test+y_scores, return_counts = True)
+        # add_0 = dict(zip(unique1,count1))
 
-        unique2, count2 = np.unique(y_test - y_scores, return_counts=True)
-        sub_0 = dict(zip(unique2, count2))
+        # unique2, count2 = np.unique(y_test - y_scores, return_counts=True)
+        # sub_0 = dict(zip(unique2, count2))
 
-        print([[add_0[0],sub_0[-1]],[sub_0[1],add_0[2]]])
+        # print([[add_0[0],sub_0[-1]],[sub_0[1],add_0[2]]])
 
-        print(confusion_matrix(y_test, y_scores))
+        conf_mat = confusion_matrix(y_test, y_scores)
 
         # precision, recall, _ = precision_recall_curve(y_test, y_scores)
 
-        precision = add_0[2]/float(add_0[2]+sub_0[-1])#average_precision
-        print(precision)
-
+        # precision = add_0[2]/float(add_0[2]+sub_0[-1])#average_precision
+        # print(precision)
+        precision = float(conf_mat[1][1])/(conf_mat[1][1]+conf_mat[0][1])
         sum_average_precision += precision
-
-        print average_precision
-
-
-
     return sum_average_precision / num_folds
-
-
 
         # plt.step(recall, precision, color='b', alpha=0.2,
         #          where='post')
@@ -355,8 +348,6 @@ def cross_validation(model, num_folds, X, y):
         # plt.ylim([0.0, 1.05])
         # plt.xlim([0.0, 1.0])
         # plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(average_precision))
-
-
 
 
 if __name__ == "__main__":

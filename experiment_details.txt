@@ -1,0 +1,47 @@
+Cross-validation splits
+-----------------------
+Fold 1
+Train = ['RA168_complete', 'RA097_FU_revised', 'RA137_complete', 'RA049_FU_complete', 'RA149_FU_complete', 'RA154_aw_revised', 'RA139_complete', 'RA030_complete', 'RA177_revised', 'RA048_FU_complete', 'RA147_complete', 'RA072_FU_complete', 'RA155_FU_complete', 'RA031_complete', 'RA110_complete', 'RA087_FU_complete', 'RA140_complete', 'RA101_complete', 'RA060_FU_complete', 'RA122_complete', 'RA081_complete', 'RA157_cp']
+Val = ['RA076_complete', 'RA091_FU_complete', 'RA138_complete', 'RA079_FU_complete', 'RA181_ams', 'RA113_complete', 'RA038_FU_complete', 'RA025_complete', 'RA125_complete', 'RA160_complete', 'RA056_FU_complete']
+
+Fold 2
+Train = ['RA076_complete', 'RA091_FU_complete', 'RA138_complete', 'RA079_FU_complete', 'RA181_ams', 'RA113_complete', 'RA038_FU_complete', 'RA025_complete', 'RA125_complete', 'RA160_complete', 'RA056_FU_complete', 'RA072_FU_complete', 'RA155_FU_complete', 'RA031_complete', 'RA110_complete', 'RA087_FU_complete', 'RA140_complete', 'RA101_complete', 'RA060_FU_complete', 'RA122_complete', 'RA081_complete', 'RA157_cp']
+Val = ['RA168_complete', 'RA097_FU_revised', 'RA137_complete', 'RA049_FU_complete', 'RA149_FU_complete', 'RA154_aw_revised', 'RA139_complete', 'RA030_complete', 'RA177_revised', 'RA048_FU_complete', 'RA147_complete']
+
+Fold 3
+Train = ['RA076_complete', 'RA091_FU_complete', 'RA138_complete', 'RA079_FU_complete', 'RA181_ams', 'RA113_complete', 'RA038_FU_complete', 'RA025_complete', 'RA125_complete', 'RA160_complete', 'RA056_FU_complete', 'RA168_complete', 'RA097_FU_revised', 'RA137_complete', 'RA049_FU_complete', 'RA149_FU_complete', 'RA154_aw_revised', 'RA139_complete', 'RA030_complete', 'RA177_revised', 'RA048_FU_complete', 'RA147_complete']
+Val = ['RA072_FU_complete', 'RA155_FU_complete', 'RA031_complete', 'RA110_complete', 'RA087_FU_complete', 'RA140_complete', 'RA101_complete', 'RA060_FU_complete', 'RA122_complete', 'RA081_complete', 'RA157_cp']
+
+
+Part 1: Single-frame Arm-based Detector
+---------------------------------------
+Frames/sample  = 1
+Testing stride = 1 (test every frame)
+Use only arms  = Yes
+
+
+Part 2: Single-frame Body-based Detector
+----------------------------------------
+Frames/sample  = 1
+Testing stride = 1 (test every frame)
+Use only arms  = No (use all pose points)
+
+
+Part 3: Sliding window Arm-based Detector
+-----------------------------------------
+Frames/sample  = 5, 10, 20 (3 experiments)
+Testing stride = 3,  5, 10 (stride for each corresponding frames/sample)
+Use only arms  = Yes
++ve sample GT frame overlap >= 0.5
+
+* This means you would be doing 3-fold cross-validation on 3 different settings.
+* The overlap of 0.5 indicates the fraction of frames that need to be on +ve ground-truth (pointing) frames for a sliding window to be considered a positive sample.
+
+
+Part 4: Sliding window Body-based Detector
+------------------------------------------
+Frames/sample  = 5, 10, 20 (3 experiments)
+Testing stride = 3,  5, 10 (stride for each corresponding frames/sample)
+Use only arms  = No (use all pose points)
+
+* This means you would be doing 3-fold cross-validation on 3 different settings
