@@ -396,7 +396,7 @@ def get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only):
     # scalar.fit(smpl_pose_data)
     # smpl_pose_data = scalar.transform(smpl_pose_data)
     # print "done"
-    return smpl_pose_data.flatten()
+    return smpl_pose_data[:][0:2].flatten(),np.sum(smpl_pose_data[:][2])
 
 
 def test_sample(feat_X, trained_model):
@@ -449,6 +449,8 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
     data_X = np.empty((0,nfeat))
     # this would store labels for all samples
     data_Y = np.empty((0))
+    # this would store confidence weight for all samples
+    data_Y = np.empty((0))
 
     # collect features/labels for all samples in all sessions
     for sess_name in tqdm(sess_names, desc="                Collecting all data"):
@@ -476,6 +478,7 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
         expct_n_smpls = \
             int(math.floor((n_frames - frames_per_smpl) / tmprl_stride) + 1)
         sess_feat_data = np.empty((expct_n_smpls, nfeat))
+        confidence_weight = np.empty((expct_n_smpls))
         sess_lbl_data = np.empty((expct_n_smpls))
 
         # iterate over all sliding windows (or single frames) in this video
@@ -498,7 +501,7 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
                 is_pstv_pnt_smpl(start_fr_idx, end_fr_idx, vid_meta, opts)
             # get the features for current sliding window sample (or single frame)
             # This function needs to be changed if you want to use different feats
-            sess_feat_data[smpl_i] = \
+            sess_feat_data[smpl_i], confidence_weight[smpl_i] = \
                 get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only)
 
             smpl_i += 1
@@ -511,9 +514,11 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
         data_X = np.concatenate((data_X, sess_feat_data), axis=0)
         # collect label data from all the sessions
         data_Y = np.concatenate((data_Y, sess_lbl_data), axis=0)
+        # collect confidence weight data from all the sessions
+        data_C = np.concatenate((data_C, confidence_weight), axis=0)
     #print data_X
     #print data_X.shape
-    return data_X, data_Y
+    return data_X, data_Y, data_C
 
 
 def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta, opts):
@@ -563,7 +568,7 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # you can put anything in this dictionary. It contains your trained model.
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
-    trained_model = RandomForestClassifier(n_estimators = 50, max_features = None, min_samples_split = 4, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
+    trained_model = RandomForestClassifier(n_estimators = 50, max_features = None, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
     trained_model.fit(train_X,train_Y)
     return trained_model
 
