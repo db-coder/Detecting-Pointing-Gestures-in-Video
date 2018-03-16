@@ -76,6 +76,14 @@ import numpy as np
 from sklearn import metrics as skmetrics
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import average_precision_score
+from sklearn.metrics import confusion_matrix
+
 import matplotlib.pyplot as plt
 
 script_path = os.path.dirname(os.path.realpath(__file__))
@@ -199,18 +207,44 @@ def is_pstv_pnt_smpl(start_fr_idx, end_fr_idx, vid_meta, opts):
     @returns is_pstv        {0,1}. It returns 0 when this is a negative sample,
                             and 1 when it's a positive.
     """
-    cnt_pstv = 0
+    cnt_pointing = 0
+    cnt_tap = 0
+    cnt_pat = 0
+    cnt_reach=0
+    cnt_push= 0
     # count how many frames are pointing in this sample
     for frame_idx in range(start_fr_idx, end_fr_idx):
         # find out if this is a pointing frame
+        frame_id = False
         sess_frame_idx = vid_meta["start_keyframe_num"] + frame_idx
         for stf, enf in vid_meta["pointing_frames"]:
             if stf <= sess_frame_idx and sess_frame_idx <= enf:
-                cnt_pstv += 1
+                cnt_pointing += 1
+                frame_id = True
+                break
+        for stf, enf in vid_meta["tap_gesture"]:
+            if stf <= sess_frame_idx and sess_frame_idx <= enf:
+                cnt_tap += 1
+                frame_id = True
+                break
+        for stf, enf in vid_meta["pat_table"]:
+            if stf <= sess_frame_idx and sess_frame_idx <= enf:
+                cnt_pat += 1
+                frame_id = True
+                break
+        for stf, enf in vid_meta["reach_gesture"]:
+            if stf <= sess_frame_idx and sess_frame_idx <= enf:
+                cnt_reach += 1
+                frame_id = True
+                break
+        for stf, enf in vid_meta["push_away"]:
+            if stf <= sess_frame_idx and sess_frame_idx <= enf:
+                cnt_push += 1
                 break
     # get the fraction of frames which intersect with pointing
-    is_pstv = float(cnt_pstv) / (end_fr_idx-start_fr_idx)
-    is_pstv = 1 if is_pstv >= opts.gtoverlap else 0
+    cnts = [cnt_pointing,cnt_tap,cnt_pat,cnt_reach,cnt_push]
+    is_pstv = float(max(cnts)) / (end_fr_idx-start_fr_idx)
+    is_pstv =  np.argmax(cnts)+1 if is_pstv >= opts.gtoverlap else 0
     return is_pstv
 
 
@@ -379,8 +413,8 @@ def test_sample(feat_X, trained_model):
     # scalar = StandardScaler()
     # scalar.fit(feat_X)
     # feat_X = scalar.transform(feat_X)
-    print trained_model.predict_proba([feat_X])
-    return trained_model.predict_proba([feat_X])[-1][-1]
+    #print trained_model.predict_proba([feat_X])
+    return trained_model.predict_proba([feat_X])[-1][1]
 
 
 def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
@@ -477,8 +511,8 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
         data_X = np.concatenate((data_X, sess_feat_data), axis=0)
         # collect label data from all the sessions
         data_Y = np.concatenate((data_Y, sess_lbl_data), axis=0)
-    print data_X
-    print data_X.shape
+    #print data_X
+    #print data_X.shape
     return data_X, data_Y
 
 
@@ -529,7 +563,7 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # you can put anything in this dictionary. It contains your trained model.
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
-    trained_model = RandomForestClassifier(n_estimators = 50,max_features = None, min_samples_split = 4, oob_score = True, n_jobs = -1)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
+    trained_model = RandomForestClassifier(n_estimators = 50, max_features = None, min_samples_split = 4, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
     trained_model.fit(train_X,train_Y)
     return trained_model
 
@@ -645,6 +679,7 @@ def cv_train_test(exp_name, frames_per_smpl, tmprl_stride, arms_only, sess_cv_gr
     plt.xlabel('Recall'); plt.ylabel('Precision')
     plt.ylim([0.0, 1.05]); plt.xlim([0.0, 1.0])
     plt.title(ap_desc_str)
+    plt.ion()
     plt.show()
 
 
