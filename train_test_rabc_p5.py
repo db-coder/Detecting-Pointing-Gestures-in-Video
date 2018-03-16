@@ -450,7 +450,7 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
     # this would store labels for all samples
     data_Y = np.empty((0))
     # this would store confidence weight for all samples
-    data_C = np.empty((0))
+    data_Y = np.empty((0))
 
     # collect features/labels for all samples in all sessions
     for sess_name in tqdm(sess_names, desc="                Collecting all data"):
@@ -553,7 +553,7 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
                 len(sess_names), frames_per_smpl)
 
     # get both training features, and labels
-    train_X, train_Y, train_C = \
+    train_X, train_Y = \
         get_all_data(sess_names, frames_per_smpl, training_stride, arms_only, opts)
 
     logger.info("\tCollected %d samples (%d feats), out of which %d are positively labeled", \
@@ -602,7 +602,7 @@ def test(trained_model, sess_names, frames_per_smpl, testing_stride, arms_only, 
                 len(sess_names), frames_per_smpl)
 
     # get both testing features, and labels
-    test_X, test_Y, train_C = \
+    test_X, test_Y = \
         get_all_data(sess_names, frames_per_smpl, testing_stride, arms_only, opts)
 
     logger.info("\tCollected %d samples, out of which %d are positively labeled", \
