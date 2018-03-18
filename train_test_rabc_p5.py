@@ -571,7 +571,7 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
     # trained_model = RandomForestClassifier(n_estimators = 50, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
-    trained_model = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2),n_estimators=50,learning_rate=1.5,algorithm="SAMME")
+    trained_model = AdaBoostClassifier(n_estimators=100)
     trained_model.fit(train_X,train_Y,sample_weight=train_C)
     return trained_model
 
