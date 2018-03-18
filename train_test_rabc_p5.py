@@ -561,14 +561,16 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     train_X, train_Y, train_C = \
         get_all_data(sess_names, frames_per_smpl, training_stride, arms_only, opts)
 
-    data = pd.DataFrame(np.zeros(train_X.shape[0],train_X.shape[1] + 1))
+    data = pd.DataFrame(np.zeros((train_X.shape[0],train_X.shape[1] + 1)))
     data.iloc[:,:-1] = train_X
     data.iloc[:,-1] = train_C
 
     input_new = data.iloc[:,:]
-    smooth_input_new = pd.rolling_mean(input_new,30)
-    train_X_1 = (smooth_input_new[30:,:-1]).values
-    train_C_1 = (smooth_input_new[30:,-1]).values
+    smooth_input_new = input_new.rolling(30).mean()
+    X = smooth_input_new[30:,:-1]
+    C = smooth_input_new[30:,-1]
+    train_X_1 = X.values
+    train_C_1 = C.values
     train_Y_1 = train_Y[30:,:]
 
     logger.info("\tCollected %d samples (%d feats), out of which %d are positively labeled", \
