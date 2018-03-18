@@ -373,7 +373,7 @@ def get_n_feats(frames_per_smpl, arms_only):
     # change how each sample is collected.
     ############################################################################
     nfeat = 48 if arms_only else 60
-    nfeat *= frames_per_smpl * 2
+    nfeat *= frames_per_smpl * 3
     return nfeat
 
 
@@ -401,7 +401,8 @@ def get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only):
     # scalar.fit(smpl_pose_data)
     # smpl_pose_data = scalar.transform(smpl_pose_data)
     # print "done"
-    return (smpl_pose_data[:,:,0:2]).flatten(),np.sum(smpl_pose_data[:,:,2])
+    return smpl_pose_data.flatten()
+    # return (smpl_pose_data[:,:,0:2]).flatten(),np.sum(smpl_pose_data[:,:,2])
 
 
 def test_sample(feat_X, trained_model):
@@ -455,7 +456,7 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
     # this would store labels for all samples
     data_Y = np.empty((0))
     # this would store confidence weight for all samples
-    data_C = np.empty((0))
+    # data_C = np.empty((0))
 
     # collect features/labels for all samples in all sessions
     for sess_name in tqdm(sess_names, desc="                Collecting all data"):
@@ -483,7 +484,7 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
         expct_n_smpls = \
             int(math.floor((n_frames - frames_per_smpl) / tmprl_stride) + 1)
         sess_feat_data = np.empty((expct_n_smpls, nfeat))
-        confidence_weight = np.empty((expct_n_smpls))
+        # confidence_weight = np.empty((expct_n_smpls))
         sess_lbl_data = np.empty((expct_n_smpls))
 
         # iterate over all sliding windows (or single frames) in this video
@@ -506,7 +507,8 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
                 is_pstv_pnt_smpl(start_fr_idx, end_fr_idx, vid_meta, opts)
             # get the features for current sliding window sample (or single frame)
             # This function needs to be changed if you want to use different feats
-            sess_feat_data[smpl_i], confidence_weight[smpl_i] = \
+            # sess_feat_data[smpl_i], confidence_weight[smpl_i] = \
+            sess_feat_data[smpl_i] = \
                 get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only)
 
             smpl_i += 1
@@ -520,10 +522,10 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
         # collect label data from all the sessions
         data_Y = np.concatenate((data_Y, sess_lbl_data), axis=0)
         # collect confidence weight data from all the sessions
-        data_C = np.concatenate((data_C, confidence_weight), axis=0)
+        # data_C = np.concatenate((data_C, confidence_weight), axis=0)
     #print data_X
     #print data_X.shape
-    return data_X, data_Y, data_C
+    return data_X, data_Y#, data_C
 
 
 def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta, opts):
@@ -558,20 +560,21 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
                 len(sess_names), frames_per_smpl)
 
     # get both training features, and labels
-    train_X, train_Y, train_C = \
+    # train_X, train_Y, train_C = \
+    train_X, train_Y = \
         get_all_data(sess_names, frames_per_smpl, training_stride, arms_only, opts)
 
-    data = pd.DataFrame(np.zeros((train_X.shape[0],train_X.shape[1] + 1)))
-    data.iloc[:,:-1] = train_X
-    data.iloc[:,-1] = train_C
+    data = pd.DataFrame(np.zeros((train_X.shape[0],train_X.shape[1])))
+    data.iloc[:,:] = train_X
+    # data.iloc[:,-1] = train_C
 
     input_new = data.iloc[:,:]
     smooth_input_new = input_new.rolling(30).mean()
-    X = smooth_input_new[30:,:-1]
-    C = smooth_input_new[30:,-1]
+    X = smooth_input_new.iloc[30:,:]
+    # C = smooth_input_new.iloc[30:,-1]
     train_X_1 = X.values
-    train_C_1 = C.values
-    train_Y_1 = train_Y[30:,:]
+    # train_C_1 = C.values
+    train_Y_1 = train_Y[30:]
 
     logger.info("\tCollected %d samples (%d feats), out of which %d are positively labeled", \
                 train_X.shape[0], train_X.shape[1], np.sum(train_Y))
@@ -589,8 +592,8 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # trained_model = AdaBoostClassifier(n_estimators=100)
     # trained_model =  AdaBoostClassifier(DecisionTreeClassifier(max_depth=2),n_estimators=600,learning_rate=1.5,algorithm="SAMME")
     seed = 7
-    trained_model = GradientBoostingClassifier(n_estimators=10, random_state=seed)
-    trained_model.fit(train_X_1,train_Y_1,sample_weight=train_C_1)
+    trained_model = GradientBoostingClassifier(n_estimators=50, random_state=seed)
+    trained_model.fit(train_X_1,train_Y_1)#,sample_weight=train_C_1)
     return trained_model
 
 
@@ -623,7 +626,8 @@ def test(trained_model, sess_names, frames_per_smpl, testing_stride, arms_only, 
                 len(sess_names), frames_per_smpl)
 
     # get both testing features, and labels
-    test_X, test_Y, train_C = \
+    # test_X, test_Y, train_C = \
+    test_X, test_Y = \
         get_all_data(sess_names, frames_per_smpl, testing_stride, arms_only, opts)
 
     logger.info("\tCollected %d samples, out of which %d are positively labeled", \
