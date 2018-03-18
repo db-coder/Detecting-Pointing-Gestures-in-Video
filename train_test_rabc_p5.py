@@ -71,14 +71,17 @@ import logging
 import traceback
 import math
 import random
+import pickle
 from tqdm import tqdm
 import numpy as np
+import pandas as pd
 from sklearn import metrics as skmetrics
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
@@ -558,6 +561,16 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     train_X, train_Y, train_C = \
         get_all_data(sess_names, frames_per_smpl, training_stride, arms_only, opts)
 
+    data = pd.DataFrame(np.zeros(train_X.shape[0],train_X.shape[1] + 1))
+    data.iloc[:,:-1] = train_X
+    data.iloc[:,-1] = train_C
+
+    input_new = data.iloc[:,:]
+    smooth_input_new = pd.rolling_mean(input_new,30)
+    train_X_1 = (smooth_input_new[30:,:-1]).values
+    train_C_1 = (smooth_input_new[30:,-1]).values
+    train_Y_1 = train_Y[30:,:]
+
     logger.info("\tCollected %d samples (%d feats), out of which %d are positively labeled", \
                 train_X.shape[0], train_X.shape[1], np.sum(train_Y))
 
@@ -571,8 +584,11 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
     # trained_model = RandomForestClassifier(n_estimators = 50, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
-    trained_model = AdaBoostClassifier(n_estimators=100)
-    trained_model.fit(train_X,train_Y,sample_weight=train_C)
+    # trained_model = AdaBoostClassifier(n_estimators=100)
+    # trained_model =  AdaBoostClassifier(DecisionTreeClassifier(max_depth=2),n_estimators=600,learning_rate=1.5,algorithm="SAMME")
+    seed = 7
+    trained_model = GradientBoostingClassifier(n_estimators=10, random_state=seed)
+    trained_model.fit(train_X_1,train_Y_1,sample_weight=train_C_1)
     return trained_model
 
 
