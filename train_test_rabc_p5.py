@@ -387,8 +387,8 @@ def get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only):
     # detailed in get_smpl_pose_data(). You can change the features to however
     # you think would be better for detecting the pointing task.
     ############################################################################
-    assert smpl_pose_data.size == get_n_feats(frames_per_smpl, arms_only), \
-            "Inconsistent feature size from pose data"
+    # assert smpl_pose_data.size == get_n_feats(frames_per_smpl, arms_only), \
+    #         "Inconsistent feature size from pose data"
 
     # smpl_pose_data = smpl_pose_data.flatten()
     # print smpl_pose_data
@@ -396,7 +396,7 @@ def get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only):
     # scalar.fit(smpl_pose_data)
     # smpl_pose_data = scalar.transform(smpl_pose_data)
     # print "done"
-    return smpl_pose_data[:][0:2].flatten(),np.sum(smpl_pose_data[:][2])
+    return (smpl_pose_data[:,:,0:2]).flatten(),np.sum(smpl_pose_data[:,:,2])
 
 
 def test_sample(feat_X, trained_model):
@@ -414,7 +414,7 @@ def test_sample(feat_X, trained_model):
     # scalar.fit(feat_X)
     # feat_X = scalar.transform(feat_X)
     #print trained_model.predict_proba([feat_X])
-    return trained_model.predict_proba([feat_X])[-1][1]
+    return trained_model.predict_proba([feat_X])[-1][0]
 
 
 def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
