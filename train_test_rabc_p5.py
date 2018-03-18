@@ -88,7 +88,7 @@ import matplotlib.pyplot as plt
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 default_op_dir = os.path.join(script_path, "openpose_results")
-sess_meta_fp = os.path.join(script_path, "sess_vids_meta.npy")
+sess_meta_fp = os.path.join(script_path, "sess_vids_meta2.npy")
 
 # set the logger. you can use this to log anything to the console
 logger = logging.getLogger(os.path.basename(__file__))
@@ -368,7 +368,7 @@ def get_n_feats(frames_per_smpl, arms_only):
     # change how each sample is collected.
     ############################################################################
     nfeat = 48 if arms_only else 60
-    nfeat *= frames_per_smpl * 3
+    nfeat *= frames_per_smpl * 2
     return nfeat
 
 
@@ -450,7 +450,7 @@ def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
     # this would store labels for all samples
     data_Y = np.empty((0))
     # this would store confidence weight for all samples
-    data_Y = np.empty((0))
+    data_C = np.empty((0))
 
     # collect features/labels for all samples in all sessions
     for sess_name in tqdm(sess_names, desc="                Collecting all data"):
@@ -553,7 +553,7 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
                 len(sess_names), frames_per_smpl)
 
     # get both training features, and labels
-    train_X, train_Y = \
+    train_X, train_Y, train_C = \
         get_all_data(sess_names, frames_per_smpl, training_stride, arms_only, opts)
 
     logger.info("\tCollected %d samples (%d feats), out of which %d are positively labeled", \
@@ -569,7 +569,7 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
     trained_model = RandomForestClassifier(n_estimators = 50, max_features = None, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
-    trained_model.fit(train_X,train_Y)
+    trained_model.fit(train_X,train_Y,sample_weight=train_C)
     return trained_model
 
 
@@ -602,7 +602,7 @@ def test(trained_model, sess_names, frames_per_smpl, testing_stride, arms_only, 
                 len(sess_names), frames_per_smpl)
 
     # get both testing features, and labels
-    test_X, test_Y = \
+    test_X, test_Y, train_C = \
         get_all_data(sess_names, frames_per_smpl, testing_stride, arms_only, opts)
 
     logger.info("\tCollected %d samples, out of which %d are positively labeled", \
@@ -667,6 +667,7 @@ def cv_train_test(exp_name, frames_per_smpl, tmprl_stride, arms_only, sess_cv_gr
         # collect label data from all the sessions
         all_pred_prob = np.concatenate((all_pred_prob, pred_prob), axis=0)
 
+    all_test_Y[all_test_Y != 1] = 0
     # compute the average precision metric over all K-fold cross validation runs
     ap = skmetrics.average_precision_score(all_test_Y, all_pred_prob)
 

@@ -368,7 +368,7 @@ def get_n_feats(frames_per_smpl, arms_only):
     # change how each sample is collected.
     ############################################################################
     nfeat = 48 if arms_only else 60
-    nfeat *= frames_per_smpl * 3
+    nfeat *= frames_per_smpl * 2
     return nfeat
 
 
@@ -667,6 +667,7 @@ def cv_train_test(exp_name, frames_per_smpl, tmprl_stride, arms_only, sess_cv_gr
         # collect label data from all the sessions
         all_pred_prob = np.concatenate((all_pred_prob, pred_prob), axis=0)
 
+    all_test_Y[all_test_Y != 1] = 0
     # compute the average precision metric over all K-fold cross validation runs
     ap = skmetrics.average_precision_score(all_test_Y, all_pred_prob)
 
