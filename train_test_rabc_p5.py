@@ -78,6 +78,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
 
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.metrics import precision_recall_curve
@@ -568,7 +570,8 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # you can put anything in this dictionary. It contains your trained model.
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
-    trained_model = RandomForestClassifier(n_estimators = 50, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
+    # trained_model = RandomForestClassifier(n_estimators = 50, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
+    trained_model = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2),n_estimators=50,learning_rate=1.5,algorithm="SAMME")
     trained_model.fit(train_X,train_Y,sample_weight=train_C)
     return trained_model
 
@@ -681,7 +684,7 @@ def cv_train_test(exp_name, frames_per_smpl, tmprl_stride, arms_only, sess_cv_gr
         skmetrics.precision_recall_curve(all_test_Y, all_pred_prob, pos_label=1)
 
     pickle.dump([rcll, prec, ap_desc_str], open("data5_new.pkl", "ab"))
-    
+
     # plot precision recall curve
     # plt.step(rcll, prec, color='b', alpha=0.2, where='post')
     # plt.fill_between(rcll, prec, step='post', alpha=0.2, color='b')
