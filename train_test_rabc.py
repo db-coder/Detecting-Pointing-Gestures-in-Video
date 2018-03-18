@@ -387,8 +387,8 @@ def get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only):
     # detailed in get_smpl_pose_data(). You can change the features to however
     # you think would be better for detecting the pointing task.
     ############################################################################
-    assert smpl_pose_data.size == get_n_feats(frames_per_smpl, arms_only), \
-            "Inconsistent feature size from pose data"
+    # assert smpl_pose_data.size == get_n_feats(frames_per_smpl, arms_only), \
+    #         "Inconsistent feature size from pose data"
 
     # smpl_pose_data = smpl_pose_data.flatten()
     # print smpl_pose_data
@@ -414,7 +414,7 @@ def test_sample(feat_X, trained_model):
     # scalar.fit(feat_X)
     # feat_X = scalar.transform(feat_X)
     #print trained_model.predict_proba([feat_X])
-    return trained_model.predict_proba([feat_X])[-1][0]
+    return trained_model.predict_proba([feat_X])[-1][1]
 
 
 def get_all_data(sess_names, frames_per_smpl, tmprl_stride, arms_only, opts):
@@ -568,7 +568,7 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # you can put anything in this dictionary. It contains your trained model.
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
-    trained_model = RandomForestClassifier(n_estimators = 50, max_features = None, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
+    trained_model = RandomForestClassifier(n_estimators = 50, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
     trained_model.fit(train_X,train_Y)
     return trained_model
 
@@ -668,6 +668,7 @@ def cv_train_test(exp_name, frames_per_smpl, tmprl_stride, arms_only, sess_cv_gr
         all_pred_prob = np.concatenate((all_pred_prob, pred_prob), axis=0)
 
     all_test_Y[all_test_Y != 1] = 0
+    
     # compute the average precision metric over all K-fold cross validation runs
     ap = skmetrics.average_precision_score(all_test_Y, all_pred_prob)
 

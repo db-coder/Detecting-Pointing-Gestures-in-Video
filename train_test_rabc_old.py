@@ -73,6 +73,7 @@ import math
 import random
 from tqdm import tqdm
 import numpy as np
+import pickle
 from sklearn import metrics as skmetrics
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
@@ -84,7 +85,7 @@ from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
 from sklearn.metrics import confusion_matrix
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 default_op_dir = os.path.join(script_path, "openpose_results")
@@ -387,8 +388,8 @@ def get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only):
     # detailed in get_smpl_pose_data(). You can change the features to however
     # you think would be better for detecting the pointing task.
     ############################################################################
-    # assert smpl_pose_data.size == get_n_feats(frames_per_smpl, arms_only), \
-    #         "Inconsistent feature size from pose data"
+    #assert smpl_pose_data.size == get_n_feats(frames_per_smpl, arms_only), \
+    #       "Inconsistent feature size from pose data"
 
     # smpl_pose_data = smpl_pose_data.flatten()
     # print smpl_pose_data
@@ -396,7 +397,11 @@ def get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only):
     # scalar.fit(smpl_pose_data)
     # smpl_pose_data = scalar.transform(smpl_pose_data)
     # print "done"
-    return (smpl_pose_data[:,:,0:2]).flatten(),np.sum(smpl_pose_data[:,:,2])
+    # print np.shape(smpl_pose_data)
+    #x = smpl_pose_data[:,:,0:2]
+    #print x.reshape(-1)
+
+    return smpl_pose_data[:,:,0:2].flatten(),np.sum(smpl_pose_data[:,:,2])
 
 
 def test_sample(feat_X, trained_model):
@@ -569,7 +574,7 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
     trained_model = RandomForestClassifier(n_estimators = 50, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
-    trained_model.fit(train_X,train_Y,sample_weight=train_C)
+    trained_model.fit(train_X,train_Y, sample_weight=train_C)
     return trained_model
 
 
@@ -681,7 +686,7 @@ def cv_train_test(exp_name, frames_per_smpl, tmprl_stride, arms_only, sess_cv_gr
         skmetrics.precision_recall_curve(all_test_Y, all_pred_prob, pos_label=1)
 
     pickle.dump([rcll, prec, ap_desc_str], open("data5_new.pkl", "ab"))
-    
+
     # plot precision recall curve
     # plt.step(rcll, prec, color='b', alpha=0.2, where='post')
     # plt.fill_between(rcll, prec, step='post', alpha=0.2, color='b')
