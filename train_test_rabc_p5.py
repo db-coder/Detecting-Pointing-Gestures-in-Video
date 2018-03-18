@@ -568,7 +568,7 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # you can put anything in this dictionary. It contains your trained model.
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
-    trained_model = RandomForestClassifier(n_estimators = 50, max_features = None, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
+    trained_model = RandomForestClassifier(n_estimators = 50)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
     trained_model.fit(train_X,train_Y,sample_weight=train_C)
     return trained_model
 

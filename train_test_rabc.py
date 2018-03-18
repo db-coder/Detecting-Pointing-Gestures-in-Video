@@ -396,7 +396,7 @@ def get_sample_feat(smpl_pose_data, frames_per_smpl, arms_only):
     # scalar.fit(smpl_pose_data)
     # smpl_pose_data = scalar.transform(smpl_pose_data)
     # print "done"
-    return smpl_pose_data[:][:][0:2].flatten(),np.sum(smpl_pose_data[:][:][2])
+    return (smpl_pose_data[:,:,0:2]).flatten(),np.sum(smpl_pose_data[:,:,2])
 
 
 def test_sample(feat_X, trained_model):
