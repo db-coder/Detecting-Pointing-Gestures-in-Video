@@ -297,6 +297,7 @@ def get_smpl_pose_data(start_fr_idx, end_fr_idx, json_filepattern, arms_only, vi
     """
     # get the number of frames in this sample
     n_frames = end_fr_idx - start_fr_idx
+    frm_h, frm_w = vid_meta["frame_sz"]
     # get # of pose points (according to whether this is only arms)
     if arms_only:
         n_pose_pnts = 2*n_hand_pnts + len(body_arm_kp_idxs)
@@ -335,6 +336,8 @@ def get_smpl_pose_data(start_fr_idx, end_fr_idx, json_filepattern, arms_only, vi
             # get the body pose keypoints
             pose_data = np.array(child_data[u"pose_keypoints"])
             pose_data = np.reshape(pose_data, (-1, 3))
+            pose_data[:,0] /= frm_w
+            pose_data[:,1] /= frm_h
             assert pose_data.shape[0] == n_body_pnts, \
                 "Pose data is not %d pnts: %s" % (n_body_pnts, curr_json_fp)
             # filter the arm pose data
@@ -347,6 +350,8 @@ def get_smpl_pose_data(start_fr_idx, end_fr_idx, json_filepattern, arms_only, vi
             # get the left hand keypoints
             lh_data = child_data[u"hand_left_keypoints"]
             lh_data = np.reshape(lh_data, (-1, 3))
+            lh_data[:,0] /= frm_w
+            lh_data[:,1] /= frm_h
             assert lh_data.shape[0] == n_hand_pnts, \
                 "Left hand data is not %d pnts: %s" % (n_hand_pnts, curr_json_fp)
             # add left hand pose data to the array
@@ -356,6 +361,8 @@ def get_smpl_pose_data(start_fr_idx, end_fr_idx, json_filepattern, arms_only, vi
             # get the right hand keypoints
             rh_data = child_data[u"hand_right_keypoints"]
             rh_data = np.reshape(rh_data, (-1, 3))
+            rh_data[:,0] /= frm_w
+            rh_data[:,1] /= frm_h
             assert rh_data.shape[0] == n_hand_pnts, \
                 "Right hand data is not %d pnts: %s" % (n_hand_pnts, curr_json_fp)
             # add left hand pose data to the array
@@ -588,12 +595,12 @@ def train(sess_names, frames_per_smpl, testing_stride, arms_only, sess_vids_meta
     # you can put anything in this dictionary. It contains your trained model.
     # This dictionary would be passed to the test() function. So you can use
     # this to call any testing functions on your model via this dictionary.
-    # trained_model = RandomForestClassifier(n_estimators = 50, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
+    trained_model = RandomForestClassifier(n_estimators = 50, oob_score = True)#MLPClassifier(solver = 'lbfgs', alpha = 1e-5, hidden_layer_sizes = (50, 50), random_state = 1)
     # trained_model = AdaBoostClassifier(n_estimators=100)
     # trained_model =  AdaBoostClassifier(DecisionTreeClassifier(max_depth=2),n_estimators=600,learning_rate=1.5,algorithm="SAMME")
-    seed = 7
-    trained_model = GradientBoostingClassifier(n_estimators=50, random_state=seed)
-    trained_model.fit(train_X_1,train_Y_1)#,sample_weight=train_C_1)
+    # seed = 7
+    # trained_model = GradientBoostingClassifier(n_estimators=50, random_state=seed)
+    trained_model.fit(train_X,train_Y)#,sample_weight=train_C_1)
     return trained_model
 
 
