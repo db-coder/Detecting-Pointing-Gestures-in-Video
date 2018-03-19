@@ -1,0 +1,7 @@
+To run part 1-4(say x)
+$ python train_test_rabc.py -p x
+
+To run part 5:
+$ python train_test_tabc_p5.py -p x
+
+x is the part you want to use as baseline for p5, we used x=3 here

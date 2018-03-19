@@ -1,7 +1,7 @@
 import pickle
 import matplotlib.pyplot as plt
 
-f = open("data5_new_for_part_3.pkl","r");
+f = open("qwerty.pkl","r");
 
 rcll, prec, ap_desc_str = pickle.load(f)
 
